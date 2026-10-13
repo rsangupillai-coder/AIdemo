@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoTrack AI - Smart Recycling Assistant</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-teal: #1DB584;
+            --primary-dark: #0F6B4A;
+            --accent-blue: #4A90E2;
+            --accent-red: #E74C3C;
+            --bg-light: #F5F7FA;
+            --bg-white: #FFFFFF;
+            --text-dark: #2C3E50;
+            --text-gray: #7F8C8D;
+            --border-light: #E1E8ED;
+            --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            color: var(--text-dark);
+            background-color: var(--bg-light);
+            line-height: 1.6;
+        }
+
+        /* Header & Navigation */
+        header {
+            background-color: var(--bg-white);
+            box-shadow: var(--shadow);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary-teal);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .logo::before {
+            content: '♻️';
+            font-size: 1.8rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            list-style: none;
+            align-items: center;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--text-dark);
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary-teal);
+        }
+
+        .nav-links .cta-button {
+            background-color: var(--primary-teal);
+            color: white;
+            padding: 0.6rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .nav-links .cta-button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+            line-height: 1.3;
+        }
+
+        .hero .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-gray);
+            margin-bottom: 2rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+            margin: 3rem 0;
+        }
+
+        .hero-text h1 {
+            text-align: left;
+            font-size: 2.2rem;
+        }
+
+        .hero-text p {
+            text-align: left;
+            margin-bottom: 2rem;
+            color: var(--text-gray);
+        }
+
+        .hero-image {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .hero-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+            background-color: var(--bg-light);
+        }
+
+        /* Buttons */
+        .btn {
+            display: inline-block;
+            padding: 0.85rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-teal);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--primary-teal);
+            border: 2px solid var(--primary-teal);
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--primary-teal);
+            color: white;
+        }
+
+        .btn-small {
+            padding: 0.6rem 1.2rem;
+            font-size: 0.9rem;
+        }
+
+        /* Stats Section */
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin: 3rem 0;
+            padding: 2rem;
+            background-color: var(--bg-white);
+            border-radius: 12px;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 2rem 1rem;
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-teal);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-gray);
+            font-size: 0.95rem;
+        }
+
+        /* Sections */
+        section {
+            padding: 3rem 2rem;
+        }
+
+        section h2 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: var(--text-dark);
+        }
+
+        /* How It Works */
+        .how-it-works {
+            background-color: var(--bg-white);
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .step {
+            padding: 2rem;
+            border-radius: 12px;
+            background-color: var(--bg-light);
+            text-align: center;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            background-color: var(--primary-teal);
+            color: white;
+            border-radius: 50%;
+            line-height: 50px;
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .step h3 {
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .step p {
+            color: var(--text-gray);
+            font-size: 0.95rem;
+        }
+
+        /* AI Classification Section */
+        .ai-classifier {
+            background-color: var(--bg-white);
+        }
+
+        .classifier-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            margin-top: 2rem;
+            align-items: flex-start;
+        }
+
+        .classifier-input {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        #cameraVideo, #uploadedImage {
+            width: 100%;
+            max-width: 100%;
+            border-radius: 12px;
+            background-color: #000;
+            display: none;
+        }
+
+        #cameraVideo.active, #uploadedImage.active {
+            display: block;
+        }
+
+        #imageUpload {
+            padding: 0.8rem;
+            border: 2px solid var(--border-light);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .button-group .btn {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .classifier-results {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .result-box {
+            padding: 1.5rem;
+            background-color: var(--bg-light);
+            border-radius: 12px;
+            border-left: 4px solid var(--primary-teal);
+        }
+
+        .result-label {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-dark);
+        }
+
+        .result-value {
+            font-size: 1.5rem;
+            color: var(--primary-teal);
+            font-weight: 700;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #ddd;
+            border-radius: 4px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background-color: var(--primary-teal);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+
+        .predictions-list {
+            margin-top: 1rem;
+        }
+
+        .prediction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .prediction-item:last-child {
+            border-bottom: none;
+        }
+
+        .prediction-label {
+            font-weight: 500;
+        }
+
+        .prediction-score {
+            color: var(--primary-teal);
+            font-weight: 700;
+        }
+
+        /* Confidence Warning */
+        .confidence-warning {
+            display: none;
+            padding: 1rem;
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 8px;
+            color: #856404;
+            margin-bottom: 1rem;
+            animation: slideDown 0.3s;
+        }
+
+        .confidence-warning.show {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Recycling Guidance */
+        .guidance-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .guidance-card {
+            background-color: var(--bg-white);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .guidance-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .guidance-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .guidance-card h3 {
+            margin-bottom: 1rem;
+            color: var(--text-dark);
+        }
+
+        .guidance-card p {
+            color: var(--text-gray);
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .guidance-card .btn {
+            width: 100%;
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        /* Status Messages */
+        .loading, .error, .success {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+            display: none;
+            animation: slideDown 0.3s;
+        }
+
+        .loading {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #1976d2;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #c62828;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #2e7d32;
+        }
+
+        .success.show {
+            display: block;
+        }
+
+        /* Text-to-Speech */
+        .tts-controls {
+            margin-top: 1rem;
+        }
+
+        .tts-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .nav-links {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+
+            .hero-content, .classifier-container, .steps, .guidance-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .button-group .btn {
+                width: 100%;
+            }
+
+            nav {
+                padding: 1rem;
+            }
+
+            section {
+                padding: 2rem 1rem;
+            }
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-2 {
+            margin-top: 1rem;
+        }
+
+        .mt-3 {
+            margin-top: 2rem;
+        }
+
+        .mb-1 {
+            margin-bottom: 0.5rem;
+        }
+
+        .mb-2 {
+            margin-bottom: 1rem;
+        }
+
+        .gap-1 {
+            gap: 0.5rem;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Footer */
+        footer {
+            background-color: var(--text-dark);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--primary-teal);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Accessibility */
+        button:focus, a:focus {
+            outline: 2px solid var(--primary-teal);
+            outline-offset: 2px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <nav>
+            <div class="logo">EcoTrack AI</div>
+            <ul class="nav-links">
+                <li><a href="#home">Home</a></li>
+                <li><a href="#how-it-works">How it Works</a></li>
+                <li><a href="#classifier">AI Classifier</a></li>
+                <li><a href="#guidance">Guidance</a></li>
+                <li><button onclick="document.getElementById('classifier').scrollIntoView({behavior:'smooth'})" class="cta-button">Start Now</button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1>Sort Smarter with Instant Vision AI, Precision Recycling for Plastic, Paper & Cardboard</h1>
+                    <p>Our advanced AI-powered recycling assistant helps you instantly identify materials and get precise guidance on how to recycle them properly. Reduce contamination, maximize recovery value, and build sustainable habits.</p>
+                    <div class="button-group">
+                        <button onclick="document.getElementById('classifier').scrollIntoView({behavior:'smooth'})" class="btn btn-primary">Start AI Classification</button>
+                        <button onclick="document.getElementById('how-it-works').scrollIntoView({behavior:'smooth'})" class="btn btn-secondary">Learn More</button>
+                    </div>
+                </div>
+                <div class="hero-image">
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect fill='%23f5f7fa' width='400' height='300'/%3E%3Ctext x='200' y='150' font-size='18' text-anchor='middle' dominant-baseline='middle' fill='%237f8c8d'%3ERecycling AI Preview%3C/text%3E%3C/svg%3E" alt="Recycling AI Interface Preview">
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-icon">📉</div>
+                    <div class="stat-number">62%</div>
+                    <div class="stat-label">Less Contamination</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-number">$300M+</div>
+                    <div class="stat-label">Value Recovered</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-icon">♻️</div>
+                    <div class="stat-number">84%</div>
+                    <div class="stat-label">Waste Reduction</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section id="how-it-works" class="how-it-works">
+        <div class="container">
+            <h2>How EcoTrack AI Sorts in Real Time</h2>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>Capture or Upload</h3>
+                    <p>Use your camera to instantly capture items or upload an image for classification.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>AI Recognition</h3>
+                    <p>Our advanced vision AI analyzes and identifies the material with high precision.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>Get Guidance</h3>
+                    <p>Receive instant, actionable recycling guidance tailored to the identified material.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Classifier Section -->
+    <section id="classifier" class="ai-classifier">
+        <div class="container">
+            <h2>Try the AI Image Classifier</h2>
+            <div class="classifier-container">
+                <div class="classifier-input">
+                    <div class="input-group">
+                        <label>Camera Input</label>
+                        <video id="cameraVideo"></video>
+                        <div class="button-group">
+                            <button id="startCameraBtn" class="btn btn-primary btn-small">Start Camera</button>
+                            <button id="stopCameraBtn" class="btn btn-secondary btn-small hidden">Stop Camera</button>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="imageUpload">Or Upload an Image</label>
+                        <input type="file" id="imageUpload" accept="image/*">
+                        <img id="uploadedImage" alt="Uploaded image for classification">
+                    </div>
+
+                    <div id="loadingMessage" class="loading">
+                        <strong>Loading model...</strong> Please wait while we initialize the AI classifier.
+                    </div>
+
+                    <div id="modelError" class="error hidden">
+                        <strong>Error:</strong> <span id="errorText">Failed to load the AI model.</span> Please try refreshing the page.
+                    </div>
+
+                    <div id="cameraError" class="error hidden">
+                        <strong>Camera Error:</strong> <span id="cameraErrorText">Unable to access camera.</span> Please check your permissions or use image upload instead.
+                    </div>
+                </div>
+
+                <div class="classifier-results">
+                    <div id="confidenceWarning" class="confidence-warning">
+                        ⚠️ <strong>Low Confidence:</strong> The AI is uncertain about this prediction. Please verify manually or try another angle.
+                    </div>
+
+                    <div id="predictionResults" class="hidden">
+                        <div class="result-box">
+                            <div class="result-label">Detected Material</div>
+                            <div class="result-value" id="primaryPrediction">—</div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" id="confidenceFill"></div>
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-gray); margin-top: 0.25rem;">
+                                <span id="confidencePercent">0%</span> Confidence
+                            </div>
+                        </div>
+
+                        <div class="result-box">
+                            <div class="result-label">All Predictions</div>
+                            <div class="predictions-list" id="predictionsList"></div>
+                        </div>
+
+                        <div class="tts-controls">
+                            <button id="readGuidanceBtn" class="btn btn-secondary btn-small tts-button">
+                                🔊 Read Guidance Aloud
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="noResultsMessage" class="text-center" style="color: var(--text-gray); padding: 2rem;">
+                        <p>📷 Start your camera or upload an image to begin classification.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recycling Guidance Section -->
+    <section id="guidance" class="bg-white" style="background-color: var(--bg-white);">
+        <div class="container">
+            <h2>Recycling Guidance by Core Material</h2>
+            <div class="guidance-cards">
+                <div class="guidance-card">
+                    <div class="guidance-icon">♻️</div>
+                    <h3>Plastic</h3>
+                    <p><strong>Best Practices:</strong> Rinse before recycling. Remove caps. Avoid plastic bags. Check for recycling symbols #1-#7.</p>
+                    <p><strong>What NOT to recycle:</strong> Plastic bags, foam, food containers with grease.</p>
+                    <button class="btn btn-primary" onclick="readGuidance('Plastic')">Learn More</button>
+                </div>
+                <div class="guidance-card">
+                    <div class="guidance-icon">📄</div>
+                    <h3>Paper & Pulp</h3>
+                    <p><strong>Best Practices:</strong> Keep dry. Bundle newspapers. Remove plastic windows from envelopes. Flatten boxes.</p>
+                    <p><strong>What NOT to recycle:</strong> Paper with food residue, wax coated paper, tissues.</p>
+                    <button class="btn btn-primary" onclick="readGuidance('Paper')">Learn More</button>
+                </div>
+                <div class="guidance-card">
+                    <div class="guidance-icon">📦</div>
+                    <h3>Cardboard</h3>
+                    <p><strong>Best Practices:</strong> Break down boxes. Remove tape. Keep dry. Remove any non-cardboard materials.</p>
+                    <p><strong>What NOT to recycle:</strong> Wet or greasy cardboard, waxed cardboard, cardboard with styrofoam.</p>
+                    <button class="btn btn-primary" onclick="readGuidance('Cardboard')">Learn More</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section style="background-color: var(--primary-teal); color: white; text-align: center;">
+        <div class="container">
+            <h2 style="color: white; margin-bottom: 1.5rem;">Transform Your Waste Habits. Zero Questions. 100% Precision.</h2>
+            <p style="font-size: 1.1rem; margin-bottom: 2rem;">Start using EcoTrack AI today and make a measurable impact on our planet.</p>
+            <button onclick="document.getElementById('classifier').scrollIntoView({behavior:'smooth'})" class="btn" style="background-color: white; color: var(--primary-teal); font-weight: 600;">Start Classification Now</button>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 EcoTrack AI. All rights reserved. Powered by Google Teachable Machine & TensorFlow.js</p>
+            <p style="margin-top: 1rem; font-size: 0.85rem;">
+                <a href="#">Privacy Policy</a> ·
+                <a href="#">Terms of Service</a> ·
+                <a href="#">Contact Us</a> ·
+                <a href="#">About</a>
+            </p>
+            <p style="margin-top: 1rem; font-size: 0.85rem; color: #999;">
+                ✓ No data sent to servers · ✓ Your images stay private · ✓ Works completely offline after loading
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // ============================================================================
+        // AI Classification System - Google Teachable Machine Integration
+        // ============================================================================
+
+        const MODEL_URL = 'https://teachablemachine.withgoogle.com/models/qGZVf4mXu/';
+        const CONFIDENCE_THRESHOLD = 0.6; // Warning threshold for confidence
+
+        let model = null;
+        let webcam = null;
+        let isRunning = false;
+        let cameraActive = false;
+
+        // DOM Elements
+        const startCameraBtn = document.getElementById('startCameraBtn');
+        const stopCameraBtn = document.getElementById('stopCameraBtn');
+        const cameraVideo = document.getElementById('cameraVideo');
+        const imageUpload = document.getElementById('imageUpload');
+        const uploadedImage = document.getElementById('uploadedImage');
+        const loadingMessage = document.getElementById('loadingMessage');
+        const modelError = document.getElementById('modelError');
+        const cameraError = document.getElementById('cameraError');
+        const confidenceWarning = document.getElementById('confidenceWarning');
+        const predictionResults = document.getElementById('predictionResults');
+        const noResultsMessage = document.getElementById('noResultsMessage');
+        const primaryPrediction = document.getElementById('primaryPrediction');
+        const confidenceFill = document.getElementById('confidenceFill');
+        const confidencePercent = document.getElementById('confidencePercent');
+        const predictionsList = document.getElementById('predictionsList');
+        const readGuidanceBtn = document.getElementById('readGuidanceBtn');
+
+        // Initialize Model on Page Load
+        async function initializeModel() {
+            try {
+                loadingMessage.classList.add('show');
+
+                // Load the Teachable Machine model
+                const modelURL = MODEL_URL + 'model.json';
+                const metadataURL = MODEL_URL + 'metadata.json';
+
+                model = await tmImage.load(modelURL, metadataURL);
+
+                loadingMessage.classList.remove('show');
+            } catch (error) {
+                console.error('Model loading error:', error);
+                loadingMessage.classList.remove('show');
+                modelError.classList.remove('hidden');
+                document.getElementById('errorText').textContent = error.message || 'Failed to load the AI model.';
+            }
+        }
+
+        // Start Camera
+        async function startCamera() {
+            try {
+                cameraError.classList.add('hidden');
+                loadingMessage.classList.add('show');
+
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                    audio: false
+                });
+
+                cameraVideo.srcObject = stream;
+                cameraVideo.classList.add('active');
+                uploadedImage.classList.remove('active');
+
+                startCameraBtn.classList.add('hidden');
+                stopCameraBtn.classList.remove('hidden');
+
+                cameraActive = true;
+                isRunning = true;
+                loadingMessage.classList.remove('show');
+
+                // Start predictions from camera
+                predictFromCamera();
+            } catch (error) {
+                console.error('Camera access error:', error);
+                cameraError.classList.remove('hidden');
+                document.getElementById('cameraErrorText').textContent =
+                    error.name === 'NotAllowedError'
+                        ? 'Camera permission denied. Please enable camera access in settings.'
+                        : 'Unable to access camera: ' + error.message;
+                loadingMessage.classList.remove('show');
+            }
+        }
+
+        // Stop Camera
+        function stopCamera() {
+            if (cameraVideo.srcObject) {
+                cameraVideo.srcObject.getTracks().forEach(track => track.stop());
+                cameraVideo.classList.remove('active');
+            }
+
+            startCameraBtn.classList.remove('hidden');
+            stopCameraBtn.classList.add('hidden');
+
+            cameraActive = false;
+            isRunning = false;
+        }
+
+        // Predict from Camera (continuous)
+        async function predictFromCamera() {
+            while (cameraActive && model) {
+                try {
+                    const prediction = await model.predict(cameraVideo);
+                    displayPredictions(prediction);
+
+                    // 30 FPS
+                    await new Promise(resolve => setTimeout(resolve, 33));
+                } catch (error) {
+                    console.error('Prediction error:', error);
+                    cameraActive = false;
+                }
+            }
+        }
+
+        // Handle Image Upload
+        imageUpload.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file || !model) return;
+
+            try {
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    uploadedImage.src = event.target.result;
+                    uploadedImage.classList.add('active');
+                    cameraVideo.classList.remove('active');
+
+                    // Stop camera if running
+                    if (cameraActive) stopCamera();
+
+                    // Wait for image to load
+                    uploadedImage.onload = async () => {
+                        const prediction = await model.predict(uploadedImage);
+                        displayPredictions(prediction);
+                    };
+                };
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.error('Image processing error:', error);
+                showError('Failed to process image.');
+            }
+        });
+
+        // Display Predictions
+        function displayPredictions(predictions) {
+            const sortedPredictions = predictions
+                .map((p, index) => ({ ...p, index }))
+                .sort((a, b) => b.probability - a.probability);
+
+            const topPrediction = sortedPredictions[0];
+            const confidence = topPrediction.probability;
+            const confidencePercent = Math.round(confidence * 100);
+
+            // Update UI
+            primaryPrediction.textContent = topPrediction.className || 'Unknown';
+            confidenceFill.style.width = confidencePercent + '%';
+            document.getElementById('confidencePercent').textContent = confidencePercent;
+
+            // Update predictions list
+            predictionsList.innerHTML = sortedPredictions
+                .map(pred => `
+                    <div class="prediction-item">
+                        <span class="prediction-label">${pred.className}</span>
+                        <span class="prediction-score">${Math.round(pred.probability * 100)}%</span>
+                    </div>
+                `)
+                .join('');
+
+            // Show/hide confidence warning
+            if (confidence < CONFIDENCE_THRESHOLD) {
+                confidenceWarning.classList.add('show');
+            } else {
+                confidenceWarning.classList.remove('show');
+            }
+
+            // Show results and hide "no results" message
+            predictionResults.classList.remove('hidden');
+            noResultsMessage.classList.add('hidden');
+
+            // Update button state
+            readGuidanceBtn.onclick = () => readGuidance(topPrediction.className);
+        }
+
+        // Read Guidance Aloud (Text-to-Speech)
+        function readGuidance(material) {
+            const guidances = {
+                'Plastic': 'For plastic: Rinse before recycling. Remove caps. Avoid plastic bags. Check for recycling symbols number 1 through 7. Do not recycle plastic bags, foam, or food containers with grease.',
+                'Paper': 'For paper and pulp: Keep dry. Bundle newspapers. Remove plastic windows from envelopes. Flatten boxes. Do not recycle paper with food residue, wax coated paper, or tissues.',
+                'Cardboard': 'For cardboard: Break down boxes. Remove tape. Keep dry. Remove any non cardboard materials. Do not recycle wet or greasy cardboard, waxed cardboard, or cardboard with styrofoam.',
+                'Mixed': 'Check the material type for specific guidance. Use the AI classifier to identify the exact material.'
+            };
+
+            const text = guidances[material] || guidances['Mixed'];
+
+            // Use Web Speech API
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.rate = 1;
+            utterance.pitch = 1;
+            utterance.volume = 1;
+
+            speechSynthesis.cancel(); // Stop any ongoing speech
+            speechSynthesis.speak(utterance);
+        }
+
+        // Show Error Message
+        function showError(message) {
+            const errorElement = document.getElementById('modelError');
+            document.getElementById('errorText').textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+
+        // Event Listeners
+        startCameraBtn.addEventListener('click', startCamera);
+        stopCameraBtn.addEventListener('click', stopCamera);
+
+        // Smooth scroll for navigation
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href !== '#' && document.querySelector(href)) {
+                    e.preventDefault();
+                    document.querySelector(href).scrollIntoView({ behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', initializeModel);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (cameraActive) stopCamera();
+            if (speechSynthesis.speaking) speechSynthesis.cancel();
+        });
+    </script>
+</body>
+</html>
